@@ -1,5 +1,7 @@
 package database
 
+// TODO: implement all the methods for user
+
 import (
 	"database/sql"
 	// "reflect"
@@ -7,14 +9,11 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+type User struct{}
+
 type Database struct {
 	db    *sql.DB
-	store Storage
-}
-
-type Query struct {
-	Table  string
-	Fields *any
+	store DBStorage
 }
 
 func NewDatabase(file string) (*Database, error) {
@@ -40,31 +39,48 @@ func (d *Database) createTables() error {
 	return nil
 }
 
-func (d *Database) Get(T any) (value, err error) {
-	query := "SELECT u.id, u.username, u.password, us.session_id FROM users u INNER JOIN user_session us ON u.id = us.user_id"
+func (d *Database) GetUsers() (value any, err error) {
+	query := "SELECT u.id, u.username FROM users u INNER JOIN user_session us ON u.id = us.user_id"
 	rows, err := d.db.Query(query)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	err = rows.Scan(&T)
+	type RUsers struct {
+		ID       int
+		Username string
+	}
 
+	response := make([]*RUsers, 0)
+	for rows.Next() {
+		resp := new(RUsers)
+		err := rows.Scan(&resp.ID, &resp.Username)
+		if err != nil {
+			return nil, err
+		}
+		response = append(response, resp)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return response, nil
+}
+
+func (d *Database) GetOneUserById(id int64) (value any, err error) {
 	return nil, nil
 }
 
-func (d *Database) GetOne(T any) (value, err error) {
-	return nil, nil
-}
-
-func (d *Database) Insert(T any) error {
+func (d *Database) InsertUser(user *User) error {
 	return nil
 }
 
-func (d *Database) Update(T any) error {
+func (d *Database) UpdateUser() error {
 	return nil
 }
 
-func (d *Database) Delete(T any) error {
+func (d *Database) DeleteUser() error {
 	return nil
 }
