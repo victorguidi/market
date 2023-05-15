@@ -1,5 +1,10 @@
 package database
 
+import (
+	"log"
+	"os"
+)
+
 // TODO: implement all the cache
 
 // The way the cache will work is: For Hourly, Daily, Weekly, Monthly timeframes, we will have a cache for each one of them.
@@ -10,26 +15,58 @@ package database
 // Every 12 hours, the cache will delete the files, and it will only create a new one when the user requests the data.
 
 type Cache struct {
+	data  map[string][]byte
 	store CStorage
 }
 
-func NewCache() (*Cache, error) {
-	return &Cache{}, nil
+func NewCache() *Cache {
+	return &Cache{
+		data: make(map[string][]byte),
+	}
 }
 
 func (c *Cache) Init() error {
-	return nil
+	return c.createFile()
 }
 
-func (c *Cache) Get() (value, err error) {
-	return nil, nil
+func (c *Cache) Get(key string) (value any, err error) {
+	file, err := os.Open("/run/media/victorguidi/Projects/market/src/databases/cache")
+	if err != nil {
+		log.Fatal(err)
+		return nil, err
+	}
+	defer file.Close()
+
+	clen := len(c.data[key])
+	buf := make([]byte, clen)
+	_, err = file.Read(buf)
+	if err != nil {
+		log.Fatal(err)
+		return nil, err
+	}
+
+	return buf, nil
 }
 
 func (c *Cache) GetOne(T any) (value, err error) {
 	return nil, nil
 }
 
-func (c *Cache) Insert(T any) error {
+func (c *Cache) Insert(data []byte) error {
+	file, err := os.OpenFile("/run/media/victorguidi/Projects/market/src/databases/cache", os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Fatal(err)
+		return err
+	}
+	defer file.Close()
+
+	c.data["daily"] = data
+
+	_, err = file.Write(c.data["daily"])
+	if err != nil {
+		log.Fatal(err)
+		return err
+	}
 	return nil
 }
 
@@ -38,5 +75,22 @@ func (c *Cache) Update(T any) error {
 }
 
 func (c *Cache) Delete(T any) error {
+	return nil
+}
+
+func (c *Cache) createFile() error {
+
+	cacheFile, err := os.Create("/run/media/victorguidi/Projects/market/src/databases/cache")
+	if err != nil {
+		log.Fatal(err)
+		return err
+	}
+	defer cacheFile.Close()
+
+	return nil
+
+}
+
+func (c *Cache) DeleteFile() error {
 	return nil
 }

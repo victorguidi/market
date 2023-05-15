@@ -9,11 +9,8 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-type User struct{}
-
 type Database struct {
-	db    *sql.DB
-	store DBStorage
+	db *sql.DB
 }
 
 func NewDatabase(file string) (*Database, error) {
@@ -32,29 +29,37 @@ func NewDatabase(file string) (*Database, error) {
 }
 
 func (d *Database) Init() error {
+
+	if err := d.createTables(); err != nil {
+		return err
+	}
+
 	return nil
+
 }
 
 func (d *Database) createTables() error {
+	queryUser := `CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username VARCHAR(255), password TEXT NOT NULL, email VARCHAR(255), created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)`
+
+	if _, err := d.db.Exec(queryUser); err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func (d *Database) GetUsers() (value any, err error) {
-	query := "SELECT u.id, u.username FROM users u INNER JOIN user_session us ON u.id = us.user_id"
+func (d *Database) GetUsers() (users []*User, err error) {
+
+	query := "SELECT u.id, u.username FROM users u"
 	rows, err := d.db.Query(query)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	type RUsers struct {
-		ID       int
-		Username string
-	}
-
-	response := make([]*RUsers, 0)
+	response := make([]*User, 0)
 	for rows.Next() {
-		resp := new(RUsers)
+		resp := new(User)
 		err := rows.Scan(&resp.ID, &resp.Username)
 		if err != nil {
 			return nil, err
@@ -74,7 +79,20 @@ func (d *Database) GetOneUserById(id int64) (value any, err error) {
 }
 
 func (d *Database) InsertUser(user *User) error {
+
+	query := "INSERT INTO users (username, password, email) VALUES (?, ?, ?)"
+
+	stmt, err := d.db.Prepare(query)
+	if err != nil {
+		return err
+	}
+	_, err = stmt.Exec(user.Username, user.Password, user.Email)
+	if err != nil {
+		return err
+	}
+
 	return nil
+
 }
 
 func (d *Database) UpdateUser() error {
