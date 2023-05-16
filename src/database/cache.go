@@ -3,6 +3,7 @@ package database
 import (
 	"log"
 	"os"
+	"sync"
 )
 
 // TODO: implement all the cache
@@ -13,6 +14,8 @@ import (
 // The cache will have a method to check if the file exists, and a method to save the data in the file.
 // The cache will have a method to get the data from the file, and a method to delete the file.
 // Every 12 hours, the cache will delete the files, and it will only create a new one when the user requests the data.
+
+var times = []string{"hourly", "daily", "weekly", "monthly"}
 
 type Cache struct {
 	data  map[string][]byte
@@ -26,11 +29,24 @@ func NewCache() *Cache {
 }
 
 func (c *Cache) Init() error {
-	return c.createFile()
+	wg := sync.WaitGroup{}
+	wg.Add(len(times))
+	for _, v := range times {
+		go func(v string) {
+			defer wg.Done()
+			c.data[v] = []byte{}
+			err := c.createFiles(v)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}(v)
+	}
+	wg.Wait()
+	return nil
 }
 
 func (c *Cache) Get(key string) (value any, err error) {
-	file, err := os.Open("/run/media/victorguidi/Projects/market/src/databases/cache")
+	file, err := os.Open("/run/media/victorguidi/Projects/market/src/databases/" + key)
 	if err != nil {
 		log.Fatal(err)
 		return nil, err
@@ -52,8 +68,8 @@ func (c *Cache) GetOne(T any) (value, err error) {
 	return nil, nil
 }
 
-func (c *Cache) Insert(data []byte) error {
-	file, err := os.OpenFile("/run/media/victorguidi/Projects/market/src/databases/cache", os.O_APPEND|os.O_WRONLY, 0644)
+func (c *Cache) Insert(data []byte, key string) error {
+	file, err := os.OpenFile("/run/media/victorguidi/Projects/market/src/databases/"+key, os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatal(err)
 		return err
@@ -78,9 +94,9 @@ func (c *Cache) Delete(T any) error {
 	return nil
 }
 
-func (c *Cache) createFile() error {
+func (c *Cache) createFiles(key string) error {
 
-	cacheFile, err := os.Create("/run/media/victorguidi/Projects/market/src/databases/cache")
+	cacheFile, err := os.Create("/run/media/victorguidi/Projects/market/src/databases/" + key)
 	if err != nil {
 		log.Fatal(err)
 		return err

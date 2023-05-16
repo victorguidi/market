@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 
+	_ "github.com/joho/godotenv/autoload"
 	"github.com/victorguidi/market/api"
 	"github.com/victorguidi/market/database"
 )

@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
+	"strconv"
 
 	"github.com/victorguidi/market/database"
 )
@@ -33,43 +35,8 @@ func (s *API) enableCors(w *http.ResponseWriter) {
 func (a *API) GetUsers(w http.ResponseWriter, r *http.Request) {
 	a.enableCors(&w)
 
-	data, err := a.cache.Get("daily")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	if len(data.([]byte)) > 0 {
-		type User struct {
-			Id       int    `json:"id"`
-			Username string `json:"username"`
-		}
-		var users []User
-		err := json.Unmarshal(data.([]byte), &users)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(&users)
-		return
-	}
-
-	log.Println("Cache miss")
-
 	users, err := a.DBStorage.GetUsers()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	b, err := json.Marshal(users)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	if err := a.cache.Insert(b); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -105,4 +72,81 @@ func (a *API) Put(w http.ResponseWriter, r *http.Request) error {
 
 func (a *API) Delete(w http.ResponseWriter, r *http.Request) error {
 	return nil
+}
+
+func (a *API) returnCacheData(key string) ([]byte, error) {
+	data, err := a.cache.Get(key)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(data.([]byte)) > 0 {
+		return data.([]byte), nil
+	}
+
+	return nil, nil
+}
+
+func (a *API) insertOnCache(data any, key string) error {
+	b, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+	if err := a.cache.Insert(b, key); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (a *API) GetListOfStocks(w http.ResponseWriter, r *http.Request) {
+	a.enableCors(&w)
+
+	apiKey := os.Getenv("TWELVE_API")
+	key := r.URL.Query().Get("key")
+	userId, err := strconv.ParseInt(r.URL.Query().Get("userId"), 10, 64)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	cachedData, err := a.returnCacheData(key)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if len(cachedData) > 0 {
+		type Stocks struct{}
+		var stocks []Stocks
+		err := json.Unmarshal(cachedData, &stocks)
+		if err != nil {
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(&stocks)
+		return
+	}
+
+	stocks, err := a.DBStorage.GetStocksFromUser(userId)
+
+	baseURL := "https://api.twelvedata.com/time_series?sysmbol="
+	for _, stock := range stocks.([]database.Stock) {
+		baseURL += stock.Symbol + ","
+	}
+	baseURL += "&interval=1day&apikey=" + apiKey + "source=docs"
+
+	resp, err := http.Get(baseURL)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	if err := a.insertOnCache(resp.Body, key); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	log.Println("Cache miss")
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(&resp.Body)
 }

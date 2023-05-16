@@ -40,8 +40,13 @@ func (d *Database) Init() error {
 
 func (d *Database) createTables() error {
 	queryUser := `CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username VARCHAR(255), password TEXT NOT NULL, email VARCHAR(255), created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)`
+	queryUserStocks := `CREATE TABLE IF NOT EXISTS user_stocks (user_id INT NOT NULL, stock_id INT NOT NULL, symbol VARCHAR(255))`
 
 	if _, err := d.db.Exec(queryUser); err != nil {
+		return err
+	}
+
+	if _, err := d.db.Exec(queryUserStocks); err != nil {
 		return err
 	}
 
@@ -93,6 +98,32 @@ func (d *Database) InsertUser(user *User) error {
 
 	return nil
 
+}
+
+func (d *Database) GetStocksFromUser(id int64) (value any, err error) {
+	query := "SELECT s.symbol FROM user_stocks s INNER JOIN users u ON s.user_id = u.id WHERE u.id = ?"
+	stmt, err := d.db.Prepare(query)
+	if err != nil {
+		return nil, err
+	}
+	type Stock struct {
+		Symbol string `json:"symbol"`
+	}
+	var stocks []Stock
+	rows, err := stmt.Query(id)
+	if err != nil {
+		return nil, err
+	}
+
+	for rows.Next() {
+		var stock Stock
+		err := rows.Scan(&stock.Symbol)
+		if err != nil {
+			return nil, err
+		}
+		stocks = append(stocks, stock)
+	}
+	return stocks, nil
 }
 
 func (d *Database) UpdateUser() error {

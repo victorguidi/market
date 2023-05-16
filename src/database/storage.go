@@ -3,7 +3,7 @@ package database
 type CStorage interface {
 	Get(key string) (value any, err error)
 	GetOne(T any) (value, err error)
-	Insert(data []byte) error
+	Insert(data []byte, key string) error
 	Update(T any) error
 	Delete(T any) error
 }
@@ -16,13 +16,17 @@ type User struct {
 	Stocks   any    `json:"stocks"`
 }
 
+type Stock struct {
+	Symbol string `json:"symbol"`
+}
+
 type DBStorage interface {
 	GetUsers() (users []*User, err error)
 	GetOneUserById(id int64) (value any, err error)
 	InsertUser(user *User) error
 	UpdateUser() error
 	DeleteUser() error
-	// GetStocksFromUserById() (value any, err error)
+	GetStocksFromUser(id int64) (value any, err error)
 	// InsertStockToUserById() error
 	// DeleteStockFromUserById() error
 	// GetStocks() (value any, err error)
