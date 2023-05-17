@@ -23,6 +23,7 @@ func main() {
 	api := api.NewAPI(":8080", db, cache)
 
 	http.HandleFunc("/api/v1/users", api.GetUsers)
+	http.HandleFunc("/api/v1/users/stocks/", api.GetListOfStocks)
 	http.HandleFunc("/api/v1/post/user", api.PostUser)
 	log.Println("Listening on port 8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))

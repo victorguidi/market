@@ -7,6 +7,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
+
 	"strconv"
 
 	"github.com/victorguidi/market/database"
@@ -102,8 +104,9 @@ func (a *API) GetListOfStocks(w http.ResponseWriter, r *http.Request) {
 	a.enableCors(&w)
 
 	apiKey := os.Getenv("TWELVE_API")
-	key := r.URL.Query().Get("key")
-	userId, err := strconv.ParseInt(r.URL.Query().Get("userId"), 10, 64)
+
+	key := strings.Split(r.URL.Path, "/")[5]
+	userId, err := strconv.ParseInt(strings.Split(r.URL.Path, "/")[6], 10, 64)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -116,8 +119,7 @@ func (a *API) GetListOfStocks(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(cachedData) > 0 {
-		type Stocks struct{}
-		var stocks []Stocks
+		var stocks []database.Stock
 		err := json.Unmarshal(cachedData, &stocks)
 		if err != nil {
 		}
@@ -128,17 +130,28 @@ func (a *API) GetListOfStocks(w http.ResponseWriter, r *http.Request) {
 
 	stocks, err := a.DBStorage.GetStocksFromUser(userId)
 
-	baseURL := "https://api.twelvedata.com/time_series?sysmbol="
-	for _, stock := range stocks.([]database.Stock) {
+	baseURL := "https://api.twelvedata.com/time_series?symbol="
+	for i, stock := range stocks {
+		if i == len(stocks)-1 {
+			baseURL += stock.Symbol
+			break
+		}
 		baseURL += stock.Symbol + ","
 	}
-	baseURL += "&interval=1day&apikey=" + apiKey + "source=docs"
+	baseURL += "&interval=1day&apikey=" + apiKey + "&source=docs"
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(&baseURL)
+	return
+
+	// TODO: implement the Get properly
 
 	resp, err := http.Get(baseURL)
 	if err != nil {
+		log.Fatal(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	log.Fatal(resp)
 	defer resp.Body.Close()
 
 	if err := a.insertOnCache(resp.Body, key); err != nil {

@@ -100,14 +100,11 @@ func (d *Database) InsertUser(user *User) error {
 
 }
 
-func (d *Database) GetStocksFromUser(id int64) (value any, err error) {
+func (d *Database) GetStocksFromUser(id int64) (value []Stock, err error) {
 	query := "SELECT s.symbol FROM user_stocks s INNER JOIN users u ON s.user_id = u.id WHERE u.id = ?"
 	stmt, err := d.db.Prepare(query)
 	if err != nil {
 		return nil, err
-	}
-	type Stock struct {
-		Symbol string `json:"symbol"`
 	}
 	var stocks []Stock
 	rows, err := stmt.Query(id)

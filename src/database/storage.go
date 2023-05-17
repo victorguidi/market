@@ -26,7 +26,7 @@ type DBStorage interface {
 	InsertUser(user *User) error
 	UpdateUser() error
 	DeleteUser() error
-	GetStocksFromUser(id int64) (value any, err error)
+	GetStocksFromUser(id int64) (value []Stock, err error)
 	// InsertStockToUserById() error
 	// DeleteStockFromUserById() error
 	// GetStocks() (value any, err error)
