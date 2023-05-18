@@ -1,9 +1,10 @@
 package api
 
-// TODO: implement the api for the users
+// TODO: Implement API for the stock Info
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -114,52 +115,77 @@ func (a *API) GetListOfStocks(w http.ResponseWriter, r *http.Request) {
 
 	cachedData, err := a.returnCacheData(key)
 	if err != nil {
+		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	if len(cachedData) > 0 {
-		var stocks []database.Stock
-		err := json.Unmarshal(cachedData, &stocks)
+		JSONBody := make(map[string]interface{})
+		err = json.Unmarshal(cachedData, &JSONBody)
 		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(&stocks)
+		json.NewEncoder(w).Encode(&JSONBody)
 		return
 	}
 
 	stocks, err := a.DBStorage.GetStocksFromUser(userId)
+	log.Println(stocks)
 
 	baseURL := "https://api.twelvedata.com/time_series?symbol="
 	for i, stock := range stocks {
+		if i == 7 {
+			break
+		}
 		if i == len(stocks)-1 {
 			baseURL += stock.Symbol
-			break
+			continue
 		}
 		baseURL += stock.Symbol + ","
 	}
 	baseURL += "&interval=1day&apikey=" + apiKey + "&source=docs"
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(&baseURL)
-	return
 
-	// TODO: implement the Get properly
+	log.Println(baseURL)
 
-	resp, err := http.Get(baseURL)
+	client := &http.Client{}
+	req, err := http.NewRequest("GET", baseURL, nil)
 	if err != nil {
-		log.Fatal(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	log.Fatal(resp)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	defer resp.Body.Close()
 
-	if err := a.insertOnCache(resp.Body, key); err != nil {
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	JSONBody := make(map[string]interface{})
+	err = json.Unmarshal(body, &JSONBody)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if JSONBody["status"] == "error" {
+		http.Error(w, "Invalid API key", http.StatusInternalServerError)
+		return
+	}
+
+	if err := a.insertOnCache(JSONBody, key); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	log.Println("Cache miss")
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(&resp.Body)
+	json.NewEncoder(w).Encode(&JSONBody)
 }

@@ -7,6 +7,7 @@ import (
 )
 
 // TODO: implement all the cache
+// TODO: Implement the cleaning of the cache every 12 hours
 
 // The way the cache will work is: For Hourly, Daily, Weekly, Monthly timeframes, we will have a cache for each one of them.
 // The cache will save a file for each timeframe, and it will store the data in bytes. When the user requests a timeframe, the Cache will check if the file exists, if it does, it will return the data from the file.
@@ -95,7 +96,6 @@ func (c *Cache) Delete(T any) error {
 }
 
 func (c *Cache) createFiles(key string) error {
-
 	cacheFile, err := os.Create("/run/media/victorguidi/Projects/market/src/databases/" + key)
 	if err != nil {
 		log.Fatal(err)

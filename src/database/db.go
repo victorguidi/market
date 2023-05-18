@@ -4,6 +4,7 @@ package database
 
 import (
 	"database/sql"
+	"log"
 	// "reflect"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -120,6 +121,7 @@ func (d *Database) GetStocksFromUser(id int64) (value []Stock, err error) {
 		}
 		stocks = append(stocks, stock)
 	}
+	log.Println(stocks)
 	return stocks, nil
 }
 
