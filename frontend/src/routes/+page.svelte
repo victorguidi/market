@@ -4,6 +4,7 @@
 	const stocksData = writable({});
 	const selectedStock = writable('');
 	const options = writable({});
+	const chart = writable(null);
 
 	$: stocksData.subscribe((data) => {
 		options.set({
@@ -13,7 +14,7 @@
 			series: [
 				{
 					name: $selectedStock,
-					data: data[$selectedStock]?.values.reverse().map((v) => {
+					data: data[$selectedStock]?.values.map((v) => {
 						return {
 							x: new Date(v.datetime),
 							y: [v.open, v.high, v.low, v.close]
@@ -34,7 +35,7 @@
 				series: [
 					{
 						name: stock,
-						data: $stocksData[stock]?.values.reverse().map((v) => {
+						data: $stocksData[stock]?.values.map((v) => {
 							return {
 								x: new Date(v.datetime),
 								y: [v.open, v.high, v.low, v.close]
@@ -44,19 +45,23 @@
 				]
 			};
 		});
-		chart.updateOptions($options);
+		$chart.updateOptions($options);
 	}
 
 	onMount(async () => {
 		await fetch('http://localhost:8080/api/v1/users/stocks/daily/1')
 			.then((res) => res.json())
 			.then((data) => {
+				for (let d in data) {
+					data[d].values = data[d].values.reverse();
+				}
+
 				selectedStock.set(Object.keys(data)[0]);
 				stocksData.set(data);
 			});
 
-		const chart = new ApexCharts(document.querySelector('#chart'), $options);
-		chart.render();
+		chart.set(new ApexCharts(document.querySelector('#chart'), $options));
+		$chart.render();
 	});
 </script>
 
