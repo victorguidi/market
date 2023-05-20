@@ -101,6 +101,39 @@ func (a *API) insertOnCache(data any, key string) error {
 	return nil
 }
 
+func (a *API) getFromExternalAPI(baseURL, key string) (map[string]interface{}, error) {
+	client := &http.Client{}
+	req, err := http.NewRequest("GET", baseURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	JSONBody := make(map[string]interface{})
+	err = json.Unmarshal(body, &JSONBody)
+	if err != nil {
+		return nil, err
+	}
+	if JSONBody["status"] == "error" {
+		return nil, err
+	}
+
+	if err := a.insertOnCache(JSONBody, key); err != nil {
+		return nil, err
+	}
+
+	return JSONBody, nil
+}
+
 func (a *API) GetListOfStocks(w http.ResponseWriter, r *http.Request) {
 	a.enableCors(&w)
 
@@ -148,44 +181,34 @@ func (a *API) GetListOfStocks(w http.ResponseWriter, r *http.Request) {
 	}
 	baseURL += "&interval=1day&apikey=" + apiKey + "&source=docs"
 
-	log.Println(baseURL)
-
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", baseURL, nil)
+	body, err := a.getFromExternalAPI(baseURL, key)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	defer resp.Body.Close()
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	JSONBody := make(map[string]interface{})
-	err = json.Unmarshal(body, &JSONBody)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if JSONBody["status"] == "error" {
-		http.Error(w, "Invalid API key", http.StatusInternalServerError)
-		return
-	}
-
-	if err := a.insertOnCache(JSONBody, key); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	log.Println("Cache miss")
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(&JSONBody)
+	json.NewEncoder(w).Encode(&body)
+}
+
+func (a *API) HandleGetOverviewStock(w http.ResponseWriter, r *http.Request) {
+
+	a.enableCors(&w)
+
+	api := os.Getenv("ALPHA_API")
+
+	// TODO: Implement the cache for this also
+
+	symbol := strings.Split(r.URL.Path, "/")[4]
+	url := "https://www.alphavantage.co/query?function=OVERVIEW&symbol=" + symbol + "&apikey=" + api
+
+	body, err := a.getFromExternalAPI(url, "overview")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(&body)
 }

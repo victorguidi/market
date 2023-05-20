@@ -16,7 +16,7 @@ import (
 // The cache will have a method to get the data from the file, and a method to delete the file.
 // Every 12 hours, the cache will delete the files, and it will only create a new one when the user requests the data.
 
-var times = []string{"hourly", "daily", "weekly", "monthly"}
+var times = []string{"hourly", "daily", "weekly", "monthly", "overview"}
 
 type Cache struct {
 	data  map[string][]byte
@@ -77,9 +77,9 @@ func (c *Cache) Insert(data []byte, key string) error {
 	}
 	defer file.Close()
 
-	c.data["daily"] = data
+	c.data[key] = data
 
-	_, err = file.Write(c.data["daily"])
+	_, err = file.Write(c.data[key])
 	if err != nil {
 		log.Fatal(err)
 		return err

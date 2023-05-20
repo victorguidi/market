@@ -5,6 +5,7 @@
 	const selectedStock = writable('');
 	const options = writable({});
 	const chart = writable(null);
+	const stockFundamentals = writable({});
 
 	$: stocksData.subscribe((data) => {
 		options.set({
@@ -48,6 +49,14 @@
 		$chart.updateOptions($options);
 	}
 
+	$: selectedStock.subscribe((stock) => {
+		fetch('http://localhost:8080/api/v1/stocks/' + stock)
+			.then((res) => res.json())
+			.then((data) => {
+				stockFundamentals.set(data);
+			});
+	});
+
 	onMount(async () => {
 		await fetch('http://localhost:8080/api/v1/users/stocks/daily/1')
 			.then((res) => res.json())
@@ -58,6 +67,13 @@
 
 				selectedStock.set(Object.keys(data)[0]);
 				stocksData.set(data);
+			});
+
+		await fetch('http://localhost:8080/api/v1/stocks/' + $selectedStock)
+			.then((res) => res.json())
+			.then((data) => {
+				console.log(data);
+				stockFundamentals.set(data);
 			});
 
 		chart.set(new ApexCharts(document.querySelector('#chart'), $options));
@@ -73,6 +89,12 @@
 	</div>
 	<div class="flex flex-col w-8/12 h-full">
 		<div id="chart" class="w-full m-9" />
+		<div>
+			<table>
+				<th>EBITDA</th>
+				<tr>{$stockFundamentals.EBITDA}</tr>
+			</table>
+		</div>
 	</div>
 	<div class="flex flex-col w-3/12">news and stuff</div>
 </div>
