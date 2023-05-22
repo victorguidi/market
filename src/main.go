@@ -22,11 +22,18 @@ func main() {
 
 	api := api.NewAPI(":8080", db, cache)
 
+	// User API
 	http.HandleFunc("/api/v1/users", api.GetUsers)
 	http.HandleFunc("/api/v1/users/stocks/", api.GetListOfStocks)
+
+	// Stock API
 	http.HandleFunc("/api/v1/stocks/", api.HandleGetOverviewStock)
 	http.HandleFunc("/api/v1/post/user", api.PostUser)
 	http.HandleFunc("/api/v1/post/stock", api.HandleInsertNewStock)
+
+	// RSS feed
+	http.HandleFunc("/api/v1/rss/", api.HandleGetRssTitles)
+
 	log.Println("Listening on port 8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }

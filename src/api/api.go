@@ -127,8 +127,10 @@ func (a *API) getFromExternalAPI(baseURL, key string) (map[string]interface{}, e
 		return nil, err
 	}
 
-	if err := a.insertOnCache(JSONBody, key); err != nil {
-		return nil, err
+	if key != "skip" {
+		if err := a.insertOnCache(JSONBody, key); err != nil {
+			return nil, err
+		}
 	}
 
 	return JSONBody, nil
@@ -195,26 +197,23 @@ func (a *API) GetListOfStocks(w http.ResponseWriter, r *http.Request) {
 func (a *API) HandleInsertNewStock(w http.ResponseWriter, r *http.Request) {
 	a.enableCors(&w)
 
-	baseURL := ""
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", baseURL, nil)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
+	api := os.Getenv("ALPHA_API")
+	symbol := strings.Split(r.URL.Path, "/")[4]
+	url := "https://www.alphavantage.co/query?function=OVERVIEW&symbol=" + symbol + "&apikey=" + api
 
-	resp, err := client.Do(req)
+	body, err := a.getFromExternalAPI(url, "skip")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
-	defer resp.Body.Close()
-
-	body, err := ioutil.ReadAll(resp.Body)
+	jsonBytes, err := json.Marshal(body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	var stock database.Stock
-	err = json.Unmarshal(body, &stock)
+	err = json.Unmarshal(jsonBytes, &stock)
 
 	if err := a.DBStorage.InsertNewStockInfo(&stock); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -274,5 +273,9 @@ func (a *API) HandleGetOverviewStock(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(&stock)
+
+}
+
+func (a *API) HandleReadRSSForStock(w http.ResponseWriter, r *http.Request) {
 
 }
