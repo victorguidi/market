@@ -5,6 +5,8 @@ package database
 import (
 	"database/sql"
 	"log"
+	"time"
+
 	// "reflect"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -42,12 +44,17 @@ func (d *Database) Init() error {
 func (d *Database) createTables() error {
 	queryUser := `CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username VARCHAR(255), password TEXT NOT NULL, email VARCHAR(255), created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)`
 	queryUserStocks := `CREATE TABLE IF NOT EXISTS user_stocks (user_id INT NOT NULL, stock_id INT NOT NULL, symbol VARCHAR(255))`
+	queryStocks := `CREATE TABLE IF NOT EXISTS stocks (id INTEGER PRIMARY KEY AUTOINCREMENT, Symbol VARCHAR(255), Name VARCHAR(255), Description TEXT, CIK VARCHAR(255), Exchange VARCHAR(255), Currency VARCHAR(255), Country VARCHAR(255), Sector VARCHAR(255), Industry VARCHAR(255), Address VARCHAR(255), FiscalYearEnd VARCHAR(255), LatestQuarter VARCHAR(255), MarketCapitalization VARCHAR(255), EBITDA VARCHAR(255), PERatio VARCHAR(255), PEGRatio VARCHAR(255), BookValue VARCHAR(255), DividendPerShare VARCHAR(255), DividendYield VARCHAR(255), EPS VARCHAR(255), RevenuePerShareTTM VARCHAR(255), ProfitMargin VARCHAR(255), OperatingMarginTTM VARCHAR(255), ReturnOnAssetsTTM VARCHAR(255), ReturnOnEquityTTM VARCHAR(255), RevenueTTM VARCHAR(255), GrossProfitTTM VARCHAR(255), DilutedEPSTTM VARCHAR(255), QuarterlyEarningsGrowthYOY VARCHAR(255), QuarterlyRevenueGrowthYOY VARCHAR(255), AnalystTargetPrice VARCHAR(255), TrailingPE VARCHAR(255), ForwardPE VARCHAR(255), PriceToSalesRatioTTM VARCHAR(255), PriceToBookRatio VARCHAR(255), EVToRevenue VARCHAR(255), EVToEBITDA VARCHAR(255), Beta VARCHAR(255), SharesOutstanding VARCHAR(255), DividendDate VARCHAR(255), ExDividendDate VARCHAR(255), updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)`
 
 	if _, err := d.db.Exec(queryUser); err != nil {
 		return err
 	}
 
 	if _, err := d.db.Exec(queryUserStocks); err != nil {
+		return err
+	}
+
+	if _, err := d.db.Exec(queryStocks); err != nil {
 		return err
 	}
 
@@ -123,6 +130,79 @@ func (d *Database) GetStocksFromUser(id int64) (value []Stock, err error) {
 	}
 	log.Println(stocks)
 	return stocks, nil
+}
+
+func (d *Database) InsertStockToUser(id int64, stock *Stock) error {
+	query := "INSERT INTO user_stocks (user_id, stock_id, symbol) VALUES (?, ?, ?)"
+	stmt, err := d.db.Prepare(query)
+	if err != nil {
+		return err
+	}
+	_, err = stmt.Exec(id, stock.ID, stock.Symbol)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (d *Database) InsertNewStockInfo(stock *Stock) error {
+	query := "INSERT INTO stocks (Symbol) VALUES (?)"
+	stmt, err := d.db.Prepare(query)
+	if err != nil {
+		return err
+	}
+	_, err = stmt.Exec(stock.Symbol)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+//TODO: Implement laod data if does not exists
+
+func (d *Database) UpdateStockInfo(symbol string, stock *Stock) error {
+	query := "UPDATE stocks SET Name = ?, Description = ?, CIK = ?, Exchange = ?, Currency = ?, Country = ?, Sector = ?, Industry = ?, Address = ?, FiscalYearEnd = ?, LatestQuarter = ?, MarketCapitalization = ?, EBITDA = ?, PERatio = ?, PEGRatio = ?, BookValue = ?, DividendPerShare = ?, DividendYield = ?, EPS = ?, RevenuePerShareTTM = ?, ProfitMargin = ?, OperatingMarginTTM = ?, ReturnOnAssetsTTM = ?, ReturnOnEquityTTM = ?, RevenueTTM = ?, GrossProfitTTM = ?, DilutedEPSTTM = ?, QuarterlyEarningsGrowthYOY = ?, QuarterlyRevenueGrowthYOY = ?, AnalystTargetPrice = ?, TrailingPE = ?, ForwardPE = ?, PriceToSalesRatioTTM = ?, PriceToBookRatio = ?, EVToRevenue = ?, EVToEBITDA = ?, Beta = ?, SharesOutstanding = ?, DividendDate = ?, ExDividendDate = ? WHERE Symbol = ?"
+	stmt, err := d.db.Prepare(query)
+	if err != nil {
+		return err
+	}
+	_, err = stmt.Exec(stock.Name, stock.Description, stock.CIK, stock.Exchange, stock.Currency, stock.Country, stock.Sector, stock.Industry, stock.Address, stock.FiscalYearEnd, stock.LatestQuarter, stock.MarketCapitalization, stock.EBITDA, stock.PERatio, stock.PEGRatio, stock.BookValue, stock.DividendPerShare, stock.DividendYield, stock.EPS, stock.RevenuePerShareTTM, stock.ProfitMargin, stock.OperatingMarginTTM, stock.ReturnOnAssetsTTM, stock.ReturnOnEquityTTM, stock.RevenueTTM, stock.GrossProfitTTM, stock.DilutedEPSTTM, stock.QuarterlyEarningsGrowthYOY, stock.QuarterlyRevenueGrowthYOY, stock.AnalystTargetPrice, stock.TrailingPE, stock.ForwardPE, stock.PriceToSalesRatioTTM, stock.PriceToBookRatio, stock.EVToRevenue, stock.EVToEBITDA, stock.Beta, stock.SharesOutstanding, stock.DividendDate, stock.ExDividendDate, symbol)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (d *Database) GetStockAndCheckLastUpdate(symbol string) (bool, error) {
+	query := "SELECT updated_at FROM stocks WHERE Symbol = ?"
+	stmt, err := d.db.Prepare(query)
+	if err != nil {
+		return false, err
+	}
+	var updatedAt time.Time
+	err = stmt.QueryRow(symbol).Scan(&updatedAt)
+	if err != nil {
+		return false, err
+	}
+	log.Println(updatedAt)
+	if time.Since(updatedAt).Hours() > 24 {
+		return true, nil
+	}
+	return false, nil
+}
+
+func (d *Database) GetStockInfo(symbol string) (value *Stock, err error) {
+	query := "SELECT * FROM stocks WHERE Symbol = ?"
+	stmt, err := d.db.Prepare(query)
+	if err != nil {
+		return nil, err
+	}
+	var stock Stock
+	err = stmt.QueryRow(symbol).Scan(&stock.ID, &stock.Symbol, &stock.Name, &stock.Description, &stock.CIK, &stock.Exchange, &stock.Currency, &stock.Country, &stock.Sector, &stock.Industry, &stock.Address, &stock.FiscalYearEnd, &stock.LatestQuarter, &stock.MarketCapitalization, &stock.EBITDA, &stock.PERatio, &stock.PEGRatio, &stock.BookValue, &stock.DividendPerShare, &stock.DividendYield, &stock.EPS, &stock.RevenuePerShareTTM, &stock.ProfitMargin, &stock.OperatingMarginTTM, &stock.ReturnOnAssetsTTM, &stock.ReturnOnEquityTTM, &stock.RevenueTTM, &stock.GrossProfitTTM, &stock.DilutedEPSTTM, &stock.QuarterlyEarningsGrowthYOY, &stock.QuarterlyRevenueGrowthYOY, &stock.AnalystTargetPrice, &stock.TrailingPE, &stock.ForwardPE, &stock.PriceToSalesRatioTTM, &stock.PriceToBookRatio, &stock.EVToRevenue, &stock.EVToEBITDA, &stock.Beta, &stock.SharesOutstanding, &stock.DividendDate, &stock.ExDividendDate, &stock.UpdatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return &stock, nil
 }
 
 func (d *Database) UpdateUser() error {

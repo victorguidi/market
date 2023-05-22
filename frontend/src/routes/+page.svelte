@@ -49,13 +49,13 @@
 		$chart.updateOptions($options);
 	}
 
-	$: selectedStock.subscribe((stock) => {
-		fetch('http://localhost:8080/api/v1/stocks/' + stock)
-			.then((res) => res.json())
-			.then((data) => {
-				stockFundamentals.set(data);
-			});
-	});
+	// $: selectedStock.subscribe((stock) => {
+	// 	fetch('http://localhost:8080/api/v1/stocks/' + stock)
+	// 		.then((res) => res.json())
+	// 		.then((data) => {
+	// 			stockFundamentals.set(data);
+	// 		});
+	// });
 
 	onMount(async () => {
 		await fetch('http://localhost:8080/api/v1/users/stocks/daily/1')

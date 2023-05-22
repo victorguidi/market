@@ -192,23 +192,87 @@ func (a *API) GetListOfStocks(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(&body)
 }
 
+func (a *API) HandleInsertNewStock(w http.ResponseWriter, r *http.Request) {
+	a.enableCors(&w)
+
+	baseURL := "https://www.alphavantage.co/query?function=OVERVIEW&symbol=AMD&apikey=6WI0PKOCP53TUSS9"
+	client := &http.Client{}
+	req, err := http.NewRequest("GET", baseURL, nil)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	var stock database.Stock
+	err = json.Unmarshal(body, &stock)
+
+	if err := a.DBStorage.InsertNewStockInfo(&stock); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(&stock)
+}
+
 func (a *API) HandleGetOverviewStock(w http.ResponseWriter, r *http.Request) {
 
 	a.enableCors(&w)
 
 	api := os.Getenv("ALPHA_API")
 
-	// TODO: Implement the cache for this also
-
 	symbol := strings.Split(r.URL.Path, "/")[4]
 	url := "https://www.alphavantage.co/query?function=OVERVIEW&symbol=" + symbol + "&apikey=" + api
 
-	body, err := a.getFromExternalAPI(url, "overview")
+	check, err := a.DBStorage.GetStockAndCheckLastUpdate(symbol)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if check {
+		body, err := a.getFromExternalAPI(url, "overview")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		jsonBytes, err := json.Marshal(body)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		var stock database.Stock
+		err = json.Unmarshal(jsonBytes, &stock)
+
+		if err := a.DBStorage.UpdateStockInfo(symbol, &stock); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(&body)
+		return
+	}
+
+	stock, err := a.DBStorage.GetStockInfo(symbol)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(&body)
+	json.NewEncoder(w).Encode(&stock)
+
 }

@@ -26,6 +26,7 @@ func main() {
 	http.HandleFunc("/api/v1/users/stocks/", api.GetListOfStocks)
 	http.HandleFunc("/api/v1/stocks/", api.HandleGetOverviewStock)
 	http.HandleFunc("/api/v1/post/user", api.PostUser)
+	http.HandleFunc("/api/v1/post/stock", api.HandleInsertNewStock)
 	log.Println("Listening on port 8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
