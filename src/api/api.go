@@ -195,7 +195,7 @@ func (a *API) GetListOfStocks(w http.ResponseWriter, r *http.Request) {
 func (a *API) HandleInsertNewStock(w http.ResponseWriter, r *http.Request) {
 	a.enableCors(&w)
 
-	baseURL := "https://www.alphavantage.co/query?function=OVERVIEW&symbol=AMD&apikey=6WI0PKOCP53TUSS9"
+	baseURL := ""
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", baseURL, nil)
 	if err != nil {
