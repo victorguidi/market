@@ -9,15 +9,24 @@ import (
 	"github.com/mmcdole/gofeed"
 )
 
-func NewRss() *gofeed.Feed {
-	fp := gofeed.NewParser()
-	feed, _ := fp.ParseURL("https://br.investing.com/rss/stock_Fundamental.rss")
-	return feed
+type Feeds struct {
+	Rss *gofeed.Feed
 }
 
-func (api *API) HandleGetRssTitles(w http.ResponseWriter, r *http.Request) {
+func (a *API) NewRss(links []string) *[]gofeed.Feed {
+	feeds := make([]gofeed.Feed, len(links))
+	for i, link := range links {
+		fp := gofeed.NewParser()
+		feed, err := fp.ParseURL(link)
+		if err != nil {
+			panic(err)
+		}
+		feeds[i] = *feed
+	}
+	return &feeds
+}
 
-	feed := NewRss()
+func (a *API) HandleGetRssTitles(w http.ResponseWriter, r *http.Request) {
 
 	type Rss struct {
 		Title       string `json:"title"`
@@ -30,15 +39,16 @@ func (api *API) HandleGetRssTitles(w http.ResponseWriter, r *http.Request) {
 
 	var rss []Rss = make([]Rss, 0)
 
-	for _, item := range feed.Items {
-
-		rss = append(rss, Rss{
-			Title:       item.Title,
-			Link:        item.Link,
-			Description: item.Description,
-			Author:      item.Author.Name,
-			Published:   item.Published,
-		})
+	for _, item := range a.feed {
+		for _, feed := range item.Rss.Items {
+			rss = append(rss, Rss{
+				Title:       feed.Title,
+				Link:        feed.Link,
+				Description: feed.Description,
+				Author:      feed.Author.Name,
+				Published:   feed.Published,
+			})
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")

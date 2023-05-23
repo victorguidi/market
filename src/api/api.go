@@ -1,7 +1,5 @@
 package api
 
-// TODO: Implement API for the stock Info
-
 import (
 	"encoding/json"
 	"io/ioutil"
@@ -19,6 +17,7 @@ type API struct {
 	listenAddr string
 	DBStorage  database.DBStorage
 	cache      database.CStorage
+	feed       []Feeds
 }
 
 func NewAPI(listenAddr string, store database.DBStorage, cache database.CStorage) *API {
@@ -276,6 +275,4 @@ func (a *API) HandleGetOverviewStock(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (a *API) HandleReadRSSForStock(w http.ResponseWriter, r *http.Request) {
-
-}
+//TODO: Seach for a stock

@@ -22,6 +22,14 @@ func main() {
 
 	api := api.NewAPI(":8080", db, cache)
 
+	go func() {
+		links, err := db.GetAllLinkRss()
+		if err != nil {
+			panic(err)
+		}
+		api.NewRss(links)
+	}()
+
 	// User API
 	http.HandleFunc("/api/v1/users", api.GetUsers)
 	http.HandleFunc("/api/v1/users/stocks/", api.GetListOfStocks)

@@ -8,6 +8,24 @@ type CStorage interface {
 	Delete(T any) error
 }
 
+type DBStorage interface {
+	GetUsers() (users []*User, err error)
+	GetOneUserById(id int64) (value any, err error)
+	InsertUser(user *User) error
+	UpdateUser() error
+	DeleteUser() error
+	GetStocksFromUser(id int64) (value []Stock, err error)
+	GetStockAndCheckLastUpdate(symbol string) (value bool, err error)
+	UpdateStockInfo(symbol string, stock *Stock) error
+	GetStockInfo(symbol string) (value *Stock, err error)
+	InsertNewStockInfo(stock *Stock) error
+	InsertNewLinkRss(link string) error
+	GetAllLinkRss() (value []string, err error)
+	DeleteLinkRss(link string) error
+	DeleteStockFromUserById() error
+	DeleteStock() error
+}
+
 type User struct {
 	ID       int64  `json:"id"`
 	Username string `json:"username"`
@@ -77,24 +95,4 @@ type Stock struct {
 	LastSplitFactor            string `json:"LastSplitFactor"`
 	LastSplitDate              string `json:"LastSplitDate"`
 	UpdatedAt                  string `json:"UpdatedAt"`
-}
-
-type DBStorage interface {
-	GetUsers() (users []*User, err error)
-	GetOneUserById(id int64) (value any, err error)
-	InsertUser(user *User) error
-	UpdateUser() error
-	DeleteUser() error
-	GetStocksFromUser(id int64) (value []Stock, err error)
-	GetStockAndCheckLastUpdate(symbol string) (value bool, err error)
-	UpdateStockInfo(symbol string, stock *Stock) error
-	GetStockInfo(symbol string) (value *Stock, err error)
-	InsertNewStockInfo(stock *Stock) error
-	// InsertStockToUserById() error
-	// DeleteStockFromUserById() error
-	// GetStocks() (value any, err error)
-	// GetOneStockBySymbol() (value any, err error)
-	// InsertStock() error
-	// UpdateStock() error
-	// DeleteStock() error
 }
