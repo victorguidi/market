@@ -19,8 +19,9 @@ type DBStorage interface {
 	UpdateStockInfo(symbol string, stock *Stock) error
 	GetStockInfo(symbol string) (value *Stock, err error)
 	InsertNewStockInfo(stock *Stock) error
-	InsertNewLinkRss(link string) error
+	InsertNewLinkRss(link string, userId int64) error
 	GetAllLinkRss() (value []string, err error)
+	GetAllLinkRssForUser(userId int64) (value []string, err error)
 	DeleteLinkRss(link string) error
 	DeleteStockFromUserById() error
 	DeleteStock() error

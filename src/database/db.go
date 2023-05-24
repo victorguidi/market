@@ -224,21 +224,69 @@ func (d *Database) GetStockInfo(symbol string) (value *Stock, err error) {
 	return &stock, nil
 }
 
-func (d *Database) InsertNewLinkRss(link string) error {
-	query := "INSERT INTO rss SELECT ? WHERE NOT EXISTS (SELECT * FROM rss WHERE link = ?)"
+func (d *Database) insertNewLinkRssToUser(link string, userId int64) {
+
+	feed := "SELECT id, FROM feed WHERE link = ?"
+	query := "INSERT INTO user_feed (user_id, feed_id) VALUES (?, ?)"
+
+	stmt, err := d.db.Prepare(feed)
+	if err != nil {
+		log.Fatal(err)
+	}
+	var feedId int
+	err = stmt.QueryRow(link).Scan(&feedId)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	stmt, err = d.db.Prepare(query)
+	if err != nil {
+		log.Fatal(err)
+	}
+	_, err = stmt.Exec(userId, feedId)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+}
+
+func (d *Database) InsertNewLinkRss(link string, userId int64) error {
+	query := "INSERT INTO feed (link) SELECT ? WHERE NOT EXISTS (SELECT * FROM feed WHERE link = ?)"
 	stmt, err := d.db.Prepare(query)
 	if err != nil {
+		log.Fatal(err)
 		return err
 	}
 	_, err = stmt.Exec(link, link)
 	if err != nil {
+		log.Fatal(err)
 		return err
 	}
+	go d.insertNewLinkRssToUser(link, userId)
+
 	return nil
 }
 
 func (d *Database) GetAllLinkRss() (value []string, err error) {
-	query := "SELECT link FROM rss"
+	query := "SELECT link FROM feed"
+	rows, err := d.db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	var links []string
+	for rows.Next() {
+		var link string
+		err = rows.Scan(&link)
+		if err != nil {
+			return nil, err
+		}
+		links = append(links, link)
+	}
+	return links, nil
+}
+
+func (d *Database) GetAllLinkRssForUser(userId int64) (value []string, err error) {
+	query := "SELECT link FROM feed INNER JOIN user_feed ON feed.id = user_feed.feed_id WHERE user_feed.user_id = ?"
 	rows, err := d.db.Query(query)
 	if err != nil {
 		return nil, err
