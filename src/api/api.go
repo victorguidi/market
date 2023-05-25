@@ -17,7 +17,6 @@ type API struct {
 	listenAddr string
 	DBStorage  database.DBStorage
 	cache      database.CStorage
-	feed       []Feeds
 }
 
 func NewAPI(listenAddr string, store database.DBStorage, cache database.CStorage) *API {
@@ -197,8 +196,18 @@ func (a *API) HandleInsertNewStock(w http.ResponseWriter, r *http.Request) {
 	a.enableCors(&w)
 
 	api := os.Getenv("ALPHA_API")
-	symbol := strings.Split(r.URL.Path, "/")[4]
-	url := "https://www.alphavantage.co/query?function=OVERVIEW&symbol=" + symbol + "&apikey=" + api
+
+	type Req struct {
+		Symbol string `json:"symbol"`
+	}
+	var req Req
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	url := "https://www.alphavantage.co/query?function=OVERVIEW&symbol=" + req.Symbol + "&apikey=" + api
 
 	body, err := a.getFromExternalAPI(url, "skip")
 	if err != nil {

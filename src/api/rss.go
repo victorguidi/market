@@ -1,10 +1,7 @@
 package api
 
-// TODO: implement the RSS feed
-
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -12,38 +9,18 @@ import (
 	"github.com/mmcdole/gofeed"
 )
 
-type Feeds struct {
-	Rss *gofeed.Feed
-}
-
-func (a *API) NewRss(links []string) error {
-	if len(links) == 0 {
-		return fmt.Errorf("no links to parse")
-	}
-	if len(a.feed) > 0 {
-		a.feed = make([]Feeds, 0)
-	}
-	for _, link := range links {
-		fp := gofeed.NewParser()
-		feed, err := fp.ParseURL(link)
-		if err != nil {
-			panic(err)
-		}
-		a.feed = append(a.feed, Feeds{Rss: feed})
-	}
-	return nil
+type Rss struct {
+	Title       string   `json:"title"`
+	Link        string   `json:"link"`
+	MainLink    string   `json:"mainLink"`
+	Description string   `json:"description"`
+	Categories  []string `json:"categories"`
+	Author      string   `json:"author"`
+	Published   string   `json:"published"`
+	Image       string   `json:"image"`
 }
 
 func (a *API) HandleGetRssTitles(w http.ResponseWriter, r *http.Request) {
-
-	type Rss struct {
-		Title       string `json:"title"`
-		Link        string `json:"link"`
-		Description string `json:"description"`
-		Author      string `json:"author"`
-		Published   string `json:"published"`
-		Image       string `json:"image"`
-	}
 
 	var rss []Rss = make([]Rss, 0)
 
@@ -53,19 +30,23 @@ func (a *API) HandleGetRssTitles(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for _, item := range feed {
+	for i, item := range feed {
 		fp := gofeed.NewParser()
-		feed, err := fp.ParseURL(item)
+		nfeed, err := fp.ParseURL(item)
 		if err != nil {
 			panic(err)
 		}
-		rss = append(rss, Rss{
-			Title:       feed.Title,
-			Link:        feed.Link,
-			Description: feed.Description,
-			Author:      feed.Author.Name,
-			Published:   feed.Published,
-		})
+		for _, item := range nfeed.Items {
+			rss = append(rss, Rss{
+				Title:       item.Title,
+				Link:        item.Link,
+				MainLink:    feed[i],
+				Description: item.Description,
+				Categories:  item.Categories,
+				Author:      item.Author.Name,
+				Published:   item.Published,
+			})
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -74,19 +55,10 @@ func (a *API) HandleGetRssTitles(w http.ResponseWriter, r *http.Request) {
 
 func (a *API) HandleGetRssTitlesFromUser(w http.ResponseWriter, r *http.Request) {
 
-	userId, err := strconv.ParseInt(strings.Split(r.URL.Path, "/")[4], 10, 64)
+	userId, err := strconv.ParseInt(strings.Split(r.URL.Path, "/")[5], 10, 64)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
-	}
-
-	type Rss struct {
-		Title       string `json:"title"`
-		Link        string `json:"link"`
-		Description string `json:"description"`
-		Author      string `json:"author"`
-		Published   string `json:"published"`
-		Image       string `json:"image"`
 	}
 
 	var rss []Rss = make([]Rss, 0)
@@ -97,19 +69,23 @@ func (a *API) HandleGetRssTitlesFromUser(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	for _, item := range feed {
+	for i, item := range feed {
 		fp := gofeed.NewParser()
-		feed, err := fp.ParseURL(item)
+		nfeed, err := fp.ParseURL(item)
 		if err != nil {
 			panic(err)
 		}
-		rss = append(rss, Rss{
-			Title:       feed.Title,
-			Link:        feed.Link,
-			Description: feed.Description,
-			Author:      feed.Author.Name,
-			Published:   feed.Published,
-		})
+		for _, item := range nfeed.Items {
+			rss = append(rss, Rss{
+				Title:       item.Title,
+				Link:        item.Link,
+				MainLink:    feed[i],
+				Description: item.Description,
+				Categories:  item.Categories,
+				Author:      item.Author.Name,
+				Published:   item.Published,
+			})
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -120,7 +96,7 @@ func (a *API) HandleAddRssLink(w http.ResponseWriter, r *http.Request) {
 
 	a.enableCors(&w)
 
-	userId, err := strconv.ParseInt(strings.Split(r.URL.Path, "/")[4], 10, 64)
+	userId, err := strconv.ParseInt(strings.Split(r.URL.Path, "/")[5], 10, 64)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -138,7 +114,6 @@ func (a *API) HandleAddRssLink(w http.ResponseWriter, r *http.Request) {
 	}
 
 	a.DBStorage.InsertNewLinkRss(req.Link, userId)
-	a.NewRss([]string{req.Link})
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(&req)

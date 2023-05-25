@@ -11,8 +11,6 @@ import (
 
 func main() {
 
-	// TODO: Fix RSS
-
 	db, err := database.NewDatabase("./databases/market.db")
 	if err != nil {
 		panic(err)
@@ -35,8 +33,8 @@ func main() {
 
 	// RSS feed
 	http.HandleFunc("/api/v1/rss/", api.HandleGetRssTitles)
-	http.HandleFunc("/api/v1/rss/get", api.HandleAddRssLink)
-	http.HandleFunc("/api/v1/rss/add", api.HandleAddRssLink)
+	http.HandleFunc("/api/v1/rss/get/", api.HandleGetRssTitlesFromUser)
+	http.HandleFunc("/api/v1/rss/add/", api.HandleAddRssLink)
 
 	log.Println("Listening on port 8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))

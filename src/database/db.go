@@ -164,12 +164,12 @@ func (d *Database) InsertStockToUser(id int64, stock *Stock) error {
 }
 
 func (d *Database) InsertNewStockInfo(stock *Stock) error {
-	query := "INSERT INTO stocks (Symbol) VALUES (?)"
+	query := "INSERT INTO stocks (Symbol, Name, Description, CIK, Exchange, Currency, Country, Sector, Industry, Address, FiscalYearEnd, LatestQuarter, MarketCapitalization, EBITDA, PERatio, PEGRatio, BookValue, DividendPerShare, DividendYield, EPS, RevenuePerShareTTM, ProfitMargin, OperatingMarginTTM, ReturnOnAssetsTTM, ReturnOnEquityTTM, RevenueTTM, GrossProfitTTM, DilutedEPSTTM, QuarterlyEarningsGrowthYOY, QuarterlyRevenueGrowthYOY, AnalystTargetPrice, TrailingPE, ForwardPE, PriceToSalesRatioTTM, PriceToBookRatio, EVToRevenue, EVToEBITDA, Beta, SharesOutstanding, DividendDate, ExDividendDate) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) "
 	stmt, err := d.db.Prepare(query)
 	if err != nil {
 		return err
 	}
-	_, err = stmt.Exec(stock.Symbol)
+	_, err = stmt.Exec(stock.Symbol, stock.Name, stock.Description, stock.CIK, stock.Exchange, stock.Currency, stock.Country, stock.Sector, stock.Industry, stock.Address, stock.FiscalYearEnd, stock.LatestQuarter, stock.MarketCapitalization, stock.EBITDA, stock.PERatio, stock.PEGRatio, stock.BookValue, stock.DividendPerShare, stock.DividendYield, stock.EPS, stock.RevenuePerShareTTM, stock.ProfitMargin, stock.OperatingMarginTTM, stock.ReturnOnAssetsTTM, stock.ReturnOnEquityTTM, stock.RevenueTTM, stock.GrossProfitTTM, stock.DilutedEPSTTM, stock.QuarterlyEarningsGrowthYOY, stock.QuarterlyRevenueGrowthYOY, stock.AnalystTargetPrice, stock.TrailingPE, stock.ForwardPE, stock.PriceToSalesRatioTTM, stock.PriceToBookRatio, stock.EVToRevenue, stock.EVToEBITDA, stock.Beta, stock.SharesOutstanding, stock.DividendDate, stock.ExDividendDate)
 	if err != nil {
 		return err
 	}
@@ -226,7 +226,7 @@ func (d *Database) GetStockInfo(symbol string) (value *Stock, err error) {
 
 func (d *Database) insertNewLinkRssToUser(link string, userId int64) {
 
-	feed := "SELECT id, FROM feed WHERE link = ?"
+	feed := "SELECT id FROM feed WHERE link = ?"
 	query := "INSERT INTO user_feed (user_id, feed_id) VALUES (?, ?)"
 
 	stmt, err := d.db.Prepare(feed)
@@ -287,7 +287,11 @@ func (d *Database) GetAllLinkRss() (value []string, err error) {
 
 func (d *Database) GetAllLinkRssForUser(userId int64) (value []string, err error) {
 	query := "SELECT link FROM feed INNER JOIN user_feed ON feed.id = user_feed.feed_id WHERE user_feed.user_id = ?"
-	rows, err := d.db.Query(query)
+	stmt, err := d.db.Prepare(query)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := stmt.Query(userId)
 	if err != nil {
 		return nil, err
 	}
