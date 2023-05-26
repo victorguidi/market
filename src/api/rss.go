@@ -22,6 +22,8 @@ type Rss struct {
 
 func (a *API) HandleGetRssTitles(w http.ResponseWriter, r *http.Request) {
 
+	a.enableCors(&w)
+
 	var rss []Rss = make([]Rss, 0)
 
 	feed, err := a.DBStorage.GetAllLinkRss()
@@ -54,6 +56,7 @@ func (a *API) HandleGetRssTitles(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *API) HandleGetRssTitlesFromUser(w http.ResponseWriter, r *http.Request) {
+	a.enableCors(&w)
 
 	userId, err := strconv.ParseInt(strings.Split(r.URL.Path, "/")[5], 10, 64)
 	if err != nil {

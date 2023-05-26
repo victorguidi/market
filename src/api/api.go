@@ -248,6 +248,7 @@ func (a *API) HandleGetOverviewStock(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if check {
+		log.Println("Cache Overview")
 		body, err := a.getFromExternalAPI(url, "overview")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -267,6 +268,8 @@ func (a *API) HandleGetOverviewStock(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+
+		log.Println("Cache miss")
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(&body)
