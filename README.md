@@ -1,5 +1,7 @@
 This is going to be a simple stock portfolio tracking.
 
+![Chart](chart.jpg)
+
 Features:
   - Graphics View 
   - Core fundamentals Analysis
