@@ -1,6 +1,6 @@
 This is going to be a simple stock portfolio tracking.
 
-![Chart](chart.jpg)
+![Chart](chart.png)
 
 Features:
   - Graphics View 
