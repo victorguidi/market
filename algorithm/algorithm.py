@@ -1,8 +1,8 @@
 import pandas as pd
 import numpy as np
 import pandas_datareader as web
-from sklearn.preprocessing import MinMaxScaler
-from keras.models import Sequential
+# from sklearn.preprocessing import MinMaxScaler
+# from keras.models import Sequential
 import math
 
 def get_data(ticker: str, start_date: str, end_date: str):
@@ -18,3 +18,14 @@ def get_data(ticker: str, start_date: str, end_date: str):
 # TODO: Check how was the params like P/E Ratio when stock was a buy, sell or hold and so one for other params
 # That will be the input of the neural network
 
+def read_csv_data(path: str):
+    df = pd.read_csv(path)
+    df = df[['PE ratio', 'EPS', 'PB ratio', 'Debt to Equity', 'Dividend Yield', 'ROE', 'Revenue Growth', 'Profit Margin', 'Market Cap', 'EBITDA']]
+    df = df.dropna()
+    return df
+
+if __name__ == '__main__':
+    path = "./trainingData/2014_Financial_Data.csv"
+    df = read_csv_data(path)
+    print(df.head())
+    print(df.tail())
